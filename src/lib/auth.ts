@@ -1,4 +1,5 @@
 import { isAuthError } from '@supabase/supabase-js'
+import { safeNextPath } from './safety'
 import { supabase } from './supabase'
 
 export type OAuthProvider = 'google' | 'github'
@@ -19,8 +20,7 @@ export function takeNext(): string {
   try {
     const next = sessionStorage.getItem(NEXT_KEY)
     sessionStorage.removeItem(NEXT_KEY)
-    // Only allow same-site paths.
-    if (next?.startsWith('/') && !next.startsWith('//')) return next
+    return safeNextPath(next)
   } catch {
     // ignore
   }

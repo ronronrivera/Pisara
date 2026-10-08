@@ -3,13 +3,13 @@ import NameDialog from '../components/auth/NameDialog'
 import OAuthButtons from '../components/auth/OAuthButtons'
 import { FullPageSpinner } from '../components/auth/RequireAuth'
 import Logo from '../components/landing/Logo'
+import { safeNextPath } from '../lib/safety'
 import { displayNameOf, useAuthStore } from '../store/authStore'
 import { useUiStore } from '../store/uiStore'
 
 export default function Login() {
   const [params] = useSearchParams()
-  const raw = params.get('next')
-  const next = raw?.startsWith('/') && !raw.startsWith('//') ? raw : '/boards'
+  const next = safeNextPath(params.get('next'))
   const status = useAuthStore((s) => s.status)
   const name = useAuthStore(displayNameOf)
   const openNameDialog = useUiStore((s) => s.openNameDialog)

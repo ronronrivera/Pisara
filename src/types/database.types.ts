@@ -92,6 +92,20 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+// Sharing functions (migration 000005): added by hand while the local DB was down;
+// identical to what `supabase gen types` produces.
+"join_board":
+{ Args: { "token": string }; Returns: { "board_id": string; "role": Database["public"]['Enums']["member_role"] }[] },
+"peek_invite":
+{ Args: { "token": string }; Returns: { "board_id": string; "title": string; "owner_name": string; "link_role": Database["public"]['Enums']["member_role"] }[] },
+"remove_member":
+{ Args: { "b": string; "member": string }; Returns: undefined },
+"rotate_share_token":
+{ Args: { "b": string }; Returns: string },
+"set_member_role":
+{ Args: { "b": string; "member": string; "new_role": Database["public"]['Enums']["member_role"] }; Returns: undefined },
+"share_token_for":
+{ Args: { "b": string }; Returns: string },
 "delete_stale_guests":
 { Args: Record<PropertyKey, never>; Returns: number
                            },

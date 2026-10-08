@@ -2,6 +2,7 @@ import { LogOut } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import { signOut } from '../../lib/auth'
+import { safeAvatarUrl } from '../../lib/safety'
 import { displayNameOf, useAuthStore } from '../../store/authStore'
 import SignOutDialog from '../auth/SignOutDialog'
 import Logo from '../landing/Logo'
@@ -16,8 +17,8 @@ function Avatar({ name, url }: { name: string; url: string | null | undefined })
   )
 }
 
-/** Top bar for signed-in pages: logo, optional page controls, and the user + sign out. */
-export default function AppHeader({ children }: { children?: ReactNode }) {
+/** Top bar for signed-in pages: logo, optional page controls (left) and actions (right), then the user. */
+export default function AppHeader({ children, actions }: { children?: ReactNode; actions?: ReactNode }) {
   const status = useAuthStore((s) => s.status)
   const profile = useAuthStore((s) => s.profile)
   const user = useAuthStore((s) => s.user)
@@ -27,7 +28,7 @@ export default function AppHeader({ children }: { children?: ReactNode }) {
   const [signingOut, setSigningOut] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const guest = status === 'guest'
-  const avatar = profile?.avatar_url ?? user?.user_metadata.avatar_url
+  const avatar = safeAvatarUrl(profile?.avatar_url ?? user?.user_metadata.avatar_url)
 
   async function handleSignOut() {
     setSigningOut(true)
@@ -48,6 +49,7 @@ export default function AppHeader({ children }: { children?: ReactNode }) {
           {children}
         </div>
         <div className="flex shrink-0 items-center gap-3">
+          {actions}
           {profileLoaded ? (
             <>
               <Avatar name={name} url={avatar} />
