@@ -1,7 +1,7 @@
 import { LogOut, PenLine } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
-import GuestSignOutDialog from '../components/auth/GuestSignOutDialog'
+import SignOutDialog from '../components/auth/SignOutDialog'
 import OAuthButtons from '../components/auth/OAuthButtons'
 import Logo from '../components/landing/Logo'
 import { signOut } from '../lib/auth'
@@ -62,7 +62,7 @@ export default function Dashboard() {
             )}
             <button
               type="button"
-              onClick={guest ? () => setConfirmOpen(true) : handleSignOut}
+              onClick={() => setConfirmOpen(true)}
               disabled={signingOut}
               className="ml-1 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-chalk-dim hover:text-chalk disabled:opacity-60"
             >
@@ -100,8 +100,9 @@ export default function Dashboard() {
           <p className="mt-1 max-w-sm text-sm text-chalk-dim">Creating and sharing boards is coming next.</p>
         </div>
       </main>
-      <GuestSignOutDialog
+      <SignOutDialog
         open={confirmOpen}
+        guest={guest}
         pending={signingOut}
         onCancel={() => setConfirmOpen(false)}
         onConfirm={handleSignOut}
