@@ -5,4 +5,9 @@ if (!isSupabaseConfigured) {
   throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY in .env.local')
 }
 
-export const supabase = createClient(env.supabaseUrl!, env.supabaseAnonKey!)
+export const supabase = createClient(env.supabaseUrl!, env.supabaseAnonKey!, {
+  auth: {
+    // PKCE: the OAuth redirect carries a one-time code instead of tokens in the URL.
+    flowType: 'pkce',
+  },
+})

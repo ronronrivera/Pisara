@@ -1,8 +1,9 @@
 import { motion, useInView, useReducedMotion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
-import { lazy, Suspense, useRef } from 'react'
-import { Link } from 'react-router'
+import { lazy, Suspense, useRef, useState } from 'react'
 import { useHasFinePointer, useIsSmallScreen } from '../../hooks/useMediaQuery'
+import { useStartBoard } from '../../hooks/useStartBoard'
+import { useAuthStore } from '../../store/authStore'
 import GitHubIcon from '../ui/GitHubIcon'
 import { HeroPoster } from './ScenePoster'
 
@@ -19,6 +20,8 @@ export default function Hero() {
   const finePointer = useHasFinePointer()
   const scene = useRef<HTMLDivElement>(null)
   const inView = useInView(scene, { margin: '100px' })
+  const { start, signedIn } = useStartBoard()
+  const [gitHubError, setGitHubError] = useState<string | null>(null)
 
   return (
     <section aria-labelledby="hero-title" className="relative">
@@ -54,21 +57,21 @@ export default function Hero() {
           </motion.p>
 
           <motion.div variants={fadeUp} className="mt-8 flex flex-wrap gap-3">
-            <Link
-              to="/boards" // TODO: start a guest session (signInAnonymously + name dialog) before opening a board
+            <button
+              type="button"
+              onClick={start}
               className="group inline-flex items-center gap-2 rounded-xl bg-chalk px-5 py-3 font-semibold text-board transition hover:bg-white"
             >
-              Start a board
+              {signedIn ? 'Open your boards' : 'Start a board'}
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-            </Link>
-            <Link
-              to="/login" // TODO: supabase.auth.signInWithOAuth({ provider: 'github' })
-              className="inline-flex items-center gap-2 rounded-xl border border-board-line bg-board-raised px-5 py-3 font-semibold text-chalk transition hover:border-chalk/40"
-            >
-              <GitHubIcon className="size-4" />
-              Sign in with GitHub
-            </Link>
+            </button>
+            <GitHubButton onError={setGitHubError} />
           </motion.div>
+          {gitHubError && (
+            <p role="alert" className="mt-3 text-sm text-coral">
+              {gitHubError}
+            </p>
+          )}
 
           <motion.p variants={fadeUp} className="mt-5 text-sm text-chalk-dim">
             Free · Works in your browser · Invite with a link
@@ -91,5 +94,38 @@ export default function Hero() {
         </div>
       </div>
     </section>
+  )
+}
+
+/** Signs in with GitHub, or upgrades a guest in place. Hidden for signed-in members. */
+function GitHubButton({ onError }: { onError: (message: string | null) => void }) {
+  const status = useAuthStore((s) => s.status)
+  const [pending, setPending] = useState(false)
+
+  if (status === 'member') return null
+
+  async function onClick() {
+    setPending(true)
+    onError(null)
+    const auth = await import('../../lib/auth')
+    try {
+      await (status === 'guest' ? auth.linkProvider('github') : auth.signInWithProvider('github'))
+      // On success the browser navigates away to GitHub.
+    } catch (e) {
+      onError(auth.authErrorMessage(e))
+      setPending(false)
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={pending}
+      className="inline-flex items-center gap-2 rounded-xl border border-board-line bg-board-raised px-5 py-3 font-semibold text-chalk transition hover:border-chalk/40 disabled:opacity-60"
+    >
+      <GitHubIcon className="size-4" />
+      {status === 'guest' ? 'Keep boards with GitHub' : 'Sign in with GitHub'}
+    </button>
   )
 }

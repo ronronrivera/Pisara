@@ -1,6 +1,6 @@
 import { motion, useReducedMotion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
-import { Link } from 'react-router'
+import { useStartBoard } from '../../hooks/useStartBoard'
 import { MARKERS } from './data'
 
 const DOODLE = [
@@ -12,6 +12,7 @@ const DOODLE = [
 
 export default function FinalCta() {
   const reduced = useReducedMotion()
+  const { start } = useStartBoard()
 
   return (
     <section aria-labelledby="cta-title" className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:py-32">
@@ -40,13 +41,14 @@ export default function FinalCta() {
         <p className="mx-auto mt-4 max-w-md text-lg text-chalk-dim">
           Open a board, send the link, and start sketching together in seconds.
         </p>
-        <Link
-          to="/boards" // TODO: start a guest session before opening a board
+        <button
+          type="button"
+          onClick={start}
           className="group mt-8 inline-flex items-center gap-2 rounded-xl bg-chalk px-6 py-3.5 text-lg font-semibold text-board transition hover:bg-white"
         >
           Start a board
           <ArrowRight className="size-5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-        </Link>
+        </button>
       </div>
     </section>
   )

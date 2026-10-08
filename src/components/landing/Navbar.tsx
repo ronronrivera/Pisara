@@ -1,8 +1,8 @@
 import { useMotionValueEvent, useScroll } from 'framer-motion'
 import { Menu, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
 import GitHubIcon from '../ui/GitHubIcon'
+import { useStartBoard } from '../../hooks/useStartBoard'
 import { GITHUB_URL, NAV_LINKS } from './data'
 import Logo from './Logo'
 
@@ -10,6 +10,7 @@ export default function Navbar() {
   const { scrollY } = useScroll()
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
+  const { start, signedIn } = useStartBoard()
 
   useMotionValueEvent(scrollY, 'change', (y) => setScrolled(y > 8))
 
@@ -53,12 +54,13 @@ export default function Navbar() {
         </ul>
 
         <div className="flex items-center gap-2">
-          <Link
-            to="/boards"
+          <button
+            type="button"
+            onClick={start}
             className="rounded-lg bg-chalk px-4 py-2 text-sm font-semibold text-board transition hover:bg-white"
           >
-            Start drawing
-          </Link>
+            {signedIn ? 'Your boards' : 'Start drawing'}
+          </button>
           <button
             type="button"
             className="rounded-lg p-2 text-chalk md:hidden"

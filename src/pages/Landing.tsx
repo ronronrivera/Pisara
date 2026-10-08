@@ -1,4 +1,5 @@
 import { MotionConfig } from 'framer-motion'
+import NameDialog from '../components/auth/NameDialog'
 import DemoStrip from '../components/landing/DemoStrip'
 import FeaturesGrid from '../components/landing/FeaturesGrid'
 import FinalCta from '../components/landing/FinalCta'
@@ -28,6 +29,7 @@ export default function Landing() {
         <FinalCta />
       </main>
       <Footer />
+      <NameDialog />
     </MotionConfig>
   )
 }
