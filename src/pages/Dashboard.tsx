@@ -1,6 +1,7 @@
 import { LogOut, PenLine } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
+import GuestSignOutDialog from '../components/auth/GuestSignOutDialog'
 import OAuthButtons from '../components/auth/OAuthButtons'
 import Logo from '../components/landing/Logo'
 import { signOut } from '../lib/auth'
@@ -21,20 +22,14 @@ export default function Dashboard() {
   const profile = useAuthStore((s) => s.profile)
   const user = useAuthStore((s) => s.user)
   const name = useAuthStore(displayNameOf)
+  const profileLoaded = useAuthStore((s) => s.profileLoaded)
   const navigate = useNavigate()
   const [signingOut, setSigningOut] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const guest = status === 'guest'
   const avatar = profile?.avatar_url ?? user?.user_metadata.avatar_url
 
   async function handleSignOut() {
-    if (
-      guest &&
-      !window.confirm(
-        'Guests can’t sign back in to the same account, so you’ll lose access to boards you made as a guest. Sign out anyway?',
-      )
-    ) {
-      return
-    }
     setSigningOut(true)
     try {
       await signOut()
@@ -50,14 +45,24 @@ export default function Dashboard() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
           <Logo />
           <div className="flex items-center gap-3">
-            <Avatar name={name} url={avatar} />
-            <span className="hidden text-sm font-medium sm:inline">{name}</span>
+            {profileLoaded ? (
+              <>
+                <Avatar name={name} url={avatar} />
+                <span className="hidden text-sm font-medium sm:inline">{name}</span>
+              </>
+            ) : (
+              // Placeholder until the saved profile arrives, so the header doesn't flicker.
+              <span className="flex items-center gap-3" aria-label="Loading profile">
+                <span className="size-8 animate-pulse rounded-full bg-board-line" />
+                <span className="hidden h-3.5 w-24 animate-pulse rounded bg-board-line sm:inline-block" />
+              </span>
+            )}
             {guest && (
               <span className="rounded-full border border-lime/40 px-2 py-0.5 text-xs text-lime">Guest</span>
             )}
             <button
               type="button"
-              onClick={handleSignOut}
+              onClick={guest ? () => setConfirmOpen(true) : handleSignOut}
               disabled={signingOut}
               className="ml-1 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-chalk-dim hover:text-chalk disabled:opacity-60"
             >
@@ -95,6 +100,12 @@ export default function Dashboard() {
           <p className="mt-1 max-w-sm text-sm text-chalk-dim">Creating and sharing boards is coming next.</p>
         </div>
       </main>
+      <GuestSignOutDialog
+        open={confirmOpen}
+        pending={signingOut}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={handleSignOut}
+      />
     </div>
   )
 }

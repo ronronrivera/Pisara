@@ -15,6 +15,8 @@ interface AuthState {
   status: AuthStatus
   user: User | null
   profile: Profile | null
+  /** True once we've tried to load the profile for the current user (even if it failed) */
+  profileLoaded: boolean
   error: string | null
 }
 
@@ -22,12 +24,17 @@ export const useAuthStore = create<AuthState>(() => ({
   status: 'loading',
   user: null,
   profile: null,
+  profileLoaded: false,
   error: null,
 }))
 
 const statusFor = (user: User | null): AuthStatus => (!user ? 'signedOut' : user.is_anonymous ? 'guest' : 'member')
 
-/** Name to show even before the profile row loads (or if it's missing). */
+/**
+ * Name to show. The saved profile wins; sign-in metadata is only a fallback when the
+ * profile row is missing, because it reflects the *latest* provider (e.g. Google after
+ * GitHub on the same account) and would flicker before the profile loads.
+ */
 export function displayNameOf(state: Pick<AuthState, 'user' | 'profile'>) {
   const meta = state.user?.user_metadata ?? {}
   return state.profile?.display_name ?? meta.display_name ?? meta.full_name ?? meta.name ?? meta.user_name ?? 'Guest'
@@ -42,11 +49,9 @@ export async function refreshProfile() {
     .select('id, display_name, avatar_url, is_guest')
     .eq('id', user.id)
     .maybeSingle()
-  if (error) {
-    console.warn('Could not load profile. Has the profiles migration been applied?', error.message)
-    return
-  }
-  if (useAuthStore.getState().user?.id === user.id) useAuthStore.setState({ profile: data })
+  if (useAuthStore.getState().user?.id !== user.id) return // signed out or switched meanwhile
+  if (error) console.warn('Could not load profile. Has the profiles migration been applied?', error.message)
+  useAuthStore.setState({ profile: error ? null : data, profileLoaded: true })
 }
 
 let started = false
@@ -69,10 +74,12 @@ export function initAuth() {
       supabase.auth.onAuthStateChange((event, session) => {
         const user = session?.user ?? null
         const prev = useAuthStore.getState()
+        const sameUser = !!user && prev.profile?.id === user.id
         useAuthStore.setState({
           user,
           status: statusFor(user),
-          profile: user && prev.profile?.id === user.id ? prev.profile : null,
+          profile: sameUser ? prev.profile : null,
+          profileLoaded: sameUser ? prev.profileLoaded : false,
           error: null,
         })
         // Supabase warns against awaiting its own calls inside this callback, so defer.
