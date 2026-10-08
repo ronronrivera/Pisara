@@ -1,77 +1,53 @@
-import { LogOut, PenLine } from 'lucide-react'
+import { Loader2, PenLine, Plus, RotateCw } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
-import SignOutDialog from '../components/auth/SignOutDialog'
 import OAuthButtons from '../components/auth/OAuthButtons'
-import Logo from '../components/landing/Logo'
-import { signOut } from '../lib/auth'
-import { displayNameOf, useAuthStore } from '../store/authStore'
-
-function Avatar({ name, url }: { name: string; url: string | null | undefined }) {
-  return url ? (
-    <img src={url} alt="" className="size-8 rounded-full object-cover" referrerPolicy="no-referrer" />
-  ) : (
-    <span className="flex size-8 items-center justify-center rounded-full bg-violet font-bold text-board" aria-hidden="true">
-      {name.charAt(0).toUpperCase()}
-    </span>
-  )
-}
+import AppHeader from '../components/dashboard/AppHeader'
+import BoardCard from '../components/dashboard/BoardCard'
+import DeleteBoardDialog from '../components/dashboard/DeleteBoardDialog'
+import RenameBoardDialog from '../components/dashboard/RenameBoardDialog'
+import { useBoards } from '../hooks/useBoards'
+import { boardErrorMessage, createBoard, type BoardWithRole } from '../lib/boards'
+import { useAuthStore } from '../store/authStore'
 
 export default function Dashboard() {
   const status = useAuthStore((s) => s.status)
-  const profile = useAuthStore((s) => s.profile)
-  const user = useAuthStore((s) => s.user)
-  const name = useAuthStore(displayNameOf)
-  const profileLoaded = useAuthStore((s) => s.profileLoaded)
+  const userId = useAuthStore((s) => s.user?.id)
   const navigate = useNavigate()
-  const [signingOut, setSigningOut] = useState(false)
-  const [confirmOpen, setConfirmOpen] = useState(false)
+  const { boards, status: boardsStatus, error, reload, rename, remove } = useBoards(userId)
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [renaming, setRenaming] = useState<BoardWithRole | null>(null)
+  const [deleting, setDeleting] = useState<BoardWithRole | null>(null)
   const guest = status === 'guest'
-  const avatar = profile?.avatar_url ?? user?.user_metadata.avatar_url
 
-  async function handleSignOut() {
-    setSigningOut(true)
+  async function handleCreate() {
+    setCreating(true)
+    setCreateError(null)
     try {
-      await signOut()
-      navigate('/', { replace: true })
-    } finally {
-      setSigningOut(false)
+      const board = await createBoard()
+      navigate(`/b/${board.id}`)
+    } catch (e) {
+      setCreateError(boardErrorMessage(e))
+      setCreating(false)
     }
   }
 
+  const newBoardButton = (
+    <button
+      type="button"
+      onClick={handleCreate}
+      disabled={creating}
+      className="inline-flex items-center gap-2 rounded-xl bg-chalk px-4 py-2.5 font-semibold text-board transition hover:bg-white disabled:opacity-70"
+    >
+      {creating ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Plus className="size-4" aria-hidden="true" />}
+      New board
+    </button>
+  )
+
   return (
     <div className="min-h-svh">
-      <header className="border-b border-board-line">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
-          <Logo />
-          <div className="flex items-center gap-3">
-            {profileLoaded ? (
-              <>
-                <Avatar name={name} url={avatar} />
-                <span className="hidden text-sm font-medium sm:inline">{name}</span>
-              </>
-            ) : (
-              // Placeholder until the saved profile arrives, so the header doesn't flicker.
-              <span className="flex items-center gap-3" aria-label="Loading profile">
-                <span className="size-8 animate-pulse rounded-full bg-board-line" />
-                <span className="hidden h-3.5 w-24 animate-pulse rounded bg-board-line sm:inline-block" />
-              </span>
-            )}
-            {guest && (
-              <span className="rounded-full border border-lime/40 px-2 py-0.5 text-xs text-lime">Guest</span>
-            )}
-            <button
-              type="button"
-              onClick={() => setConfirmOpen(true)}
-              disabled={signingOut}
-              className="ml-1 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-chalk-dim hover:text-chalk disabled:opacity-60"
-            >
-              <LogOut className="size-4" aria-hidden="true" />
-              Sign out
-            </button>
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
         {guest && (
@@ -93,19 +69,76 @@ export default function Dashboard() {
           </section>
         )}
 
-        <h1 className="font-display text-3xl font-bold sm:text-4xl">Your boards</h1>
-        <div className="mt-6 flex flex-col items-center justify-center rounded-2xl border border-dashed border-board-line px-6 py-16 text-center">
-          <PenLine className="size-8 text-chalk-dim" aria-hidden="true" />
-          <p className="mt-3 font-semibold">No boards yet</p>
-          <p className="mt-1 max-w-sm text-sm text-chalk-dim">Creating and sharing boards is coming next.</p>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h1 className="font-display text-3xl font-bold sm:text-4xl">Your boards</h1>
+          {boardsStatus === 'ready' && boards.length > 0 && newBoardButton}
         </div>
+        {createError && (
+          <p role="alert" className="mt-3 text-sm text-coral">
+            {createError}
+          </p>
+        )}
+
+        {boardsStatus === 'loading' && (
+          <ul aria-label="Loading boards" className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 4 }, (_, i) => (
+              <li key={i} className="overflow-hidden rounded-2xl border border-board-line">
+                <div className="aspect-[16/10] animate-pulse bg-board-raised" />
+                <div className="space-y-2 border-t border-board-line px-4 py-3">
+                  <div className="h-4 w-2/3 animate-pulse rounded bg-board-line" />
+                  <div className="h-3 w-1/3 animate-pulse rounded bg-board-line" />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {boardsStatus === 'error' && (
+          <div role="alert" className="mt-6 rounded-2xl border border-coral/30 bg-coral/5 p-6 text-center">
+            <p className="font-semibold">Couldn’t load your boards</p>
+            <p className="mt-1 text-sm text-chalk-dim">{error}</p>
+            <button
+              type="button"
+              onClick={reload}
+              className="mt-4 inline-flex items-center gap-2 rounded-xl border border-board-line px-4 py-2 font-semibold hover:border-chalk/40"
+            >
+              <RotateCw className="size-4" aria-hidden="true" /> Try again
+            </button>
+          </div>
+        )}
+
+        {boardsStatus === 'ready' && boards.length === 0 && (
+          <div className="mt-6 flex flex-col items-center justify-center rounded-2xl border border-dashed border-board-line px-6 py-16 text-center">
+            <PenLine className="size-8 text-chalk-dim" aria-hidden="true" />
+            <p className="mt-3 font-semibold">No boards yet</p>
+            <p className="mt-1 mb-5 max-w-sm text-sm text-chalk-dim">Start one and invite people with a link.</p>
+            {newBoardButton}
+          </div>
+        )}
+
+        {boardsStatus === 'ready' && boards.length > 0 && (
+          <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {boards.map((board) => (
+              <BoardCard
+                key={board.id}
+                board={board}
+                onRename={() => setRenaming(board)}
+                onDelete={() => setDeleting(board)}
+              />
+            ))}
+          </ul>
+        )}
       </main>
-      <SignOutDialog
-        open={confirmOpen}
-        guest={guest}
-        pending={signingOut}
-        onCancel={() => setConfirmOpen(false)}
-        onConfirm={handleSignOut}
+
+      <RenameBoardDialog
+        title={renaming?.title ?? null}
+        onClose={() => setRenaming(null)}
+        onRename={(title) => rename(renaming!, title)}
+      />
+      <DeleteBoardDialog
+        title={deleting?.title ?? null}
+        onClose={() => setDeleting(null)}
+        onDelete={() => remove(deleting!)}
       />
     </div>
   )
